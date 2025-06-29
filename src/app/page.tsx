@@ -2,9 +2,16 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, Zap, Database, Video, CreditCard, BarChart } from "lucide-react";
+import { CheckCircle, Circle, Zap, Database, Video, CreditCard, BarChart, BrainCircuit } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import AuthButtons from "@/components/auth/AuthButtons";
+import OpenAITestButton from "@/components/dashboard/OpenAITestButton";
+import SupabaseTestButtons from "@/components/dashboard/SupabaseTestButtons";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   const setupProgress = [
     { name: "Next.js 15 + TypeScript", status: "completed", description: "Framework base configurado" },
     { name: "Tailwind CSS + shadcn/ui", status: "completed", description: "Sistema de diseño" },
@@ -12,8 +19,8 @@ export default function Home() {
     { name: "Gestión de dependencias", status: "completed", description: "Documentación completa" },
     { name: "Tipos TypeScript", status: "completed", description: "Definiciones de datos" },
     { name: "Configuración de servicios", status: "completed", description: "Setup centralizado" },
-    { name: "Supabase", status: "pending", description: "Base de datos y auth" },
-    { name: "OpenAI GPT-4o", status: "pending", description: "Generación IA" },
+    { name: "Supabase", status: "completed", description: "Base de datos y auth - CONFIGURADO ✅" },
+    { name: "OpenAI GPT-4o", status: "completed", description: "Generación IA" },
     { name: "Remotion Lambda", status: "pending", description: "Renderizado videos" },
     { name: "TikTok API", status: "pending", description: "Publicación automática" },
   ];
@@ -48,20 +55,25 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            🎬 Reelizalo
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-            Plataforma SaaS que transforma fotos de productos en videos virales de TikTok usando IA
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <Badge variant="secondary" className="text-sm">
-              MVP en desarrollo
-            </Badge>
-            <Badge variant="outline" className="text-sm">
-              {Math.round(progressPercentage)}% completado
-            </Badge>
+        <div className="flex justify-between items-center">
+          <div className="text-center space-y-4 flex-grow">
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              🎬 Reelizalo
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
+              Plataforma SaaS que transforma fotos de productos en videos virales de TikTok usando IA
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <Badge variant="secondary" className="text-sm">
+                MVP en desarrollo
+              </Badge>
+              <Badge variant="outline" className="text-sm">
+                {Math.round(progressPercentage)}% completado
+              </Badge>
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <AuthButtons user={user} />
           </div>
         </div>
 
@@ -165,6 +177,50 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        {/* OpenAI Test */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BrainCircuit className="h-5 w-5" />
+              🤖 Prueba de Conexión OpenAI
+            </CardTitle>
+            <CardDescription>
+              Verifica que la API de OpenAI esté accesible.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OpenAITestButton />
+          </CardContent>
+        </Card>
+
+        {/* Supabase Test */}
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-800">
+              <Database className="h-5 w-5" />
+              🗄️ Prueba de Conexión Supabase
+            </CardTitle>
+            <CardDescription className="text-green-600">
+              Verifica que la configuración de Supabase esté funcionando correctamente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <SupabaseTestButtons />
+              <div className="bg-white p-4 rounded-lg border border-green-200">
+                <h4 className="font-medium text-green-800 mb-2">🔧 Setup Completado:</h4>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>✅ Supabase proyecto creado desde Vercel</li>
+                  <li>✅ Variables de entorno configuradas</li>
+                  <li>✅ Cliente Supabase configurado</li>
+                  <li>✅ Middleware de autenticación</li>
+                  <li>⚠️ Falta ejecutar schema SQL en Supabase</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Quick Links */}
         <Card>
           <CardHeader>
@@ -180,7 +236,7 @@ export default function Home() {
                   📦 Gestión de Dependencias
                 </Button>
               </Link>
-              <Link href="https://github.com/reelizalo/reelizalo" target="_blank">
+              <Link href="https://github.com/stefanoucc/reelizalo" target="_blank">
                 <Button variant="outline" className="w-full justify-start">
                   🐙 Repositorio GitHub
                 </Button>
