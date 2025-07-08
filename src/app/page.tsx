@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import AuthButtons from "@/components/auth/AuthButtons";
 import OpenAITestButton from "@/components/dashboard/OpenAITestButton";
 import SupabaseTestButtons from "@/components/dashboard/SupabaseTestButtons";
+import PaymentTestCard from "@/components/payment/PaymentTestCard";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -20,7 +21,8 @@ export default async function Home() {
     { name: "Tipos TypeScript", status: "completed", description: "Definiciones de datos" },
     { name: "Configuración de servicios", status: "completed", description: "Setup centralizado" },
     { name: "Supabase", status: "completed", description: "Base de datos y auth - CONFIGURADO ✅" },
-    { name: "OpenAI GPT-4o", status: "completed", description: "Generación IA" },
+    { name: "Mercado Pago", status: "completed", description: "Sistema de pagos - CONFIGURADO ✅" },
+    { name: "OpenAI GPT-4o", status: "pending", description: "Generación IA" },
     { name: "Remotion Lambda", status: "pending", description: "Renderizado videos" },
     { name: "TikTok API", status: "pending", description: "Publicación automática" },
   ];
@@ -132,6 +134,24 @@ export default async function Home() {
             </Card>
           ))}
         </div>
+
+        {/* Payment Test Section */}
+        {user && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <CreditCard className="h-5 w-5" />
+                💳 Prueba de Pagos con Mercado Pago
+              </CardTitle>
+              <CardDescription className="text-blue-600">
+                Prueba el sistema de pagos integrado con Mercado Pago Checkout Pro
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PaymentTestCard />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Architecture Diagram */}
         <Card>
