@@ -1,315 +1,361 @@
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, Zap, Database, Video, CreditCard, BarChart, BrainCircuit } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import AuthButtons from "@/components/auth/AuthButtons";
-import OpenAITestButton from "@/components/dashboard/OpenAITestButton";
-import SupabaseTestButtons from "@/components/dashboard/SupabaseTestButtons";
-import PaymentTestCard from "@/components/payment/PaymentTestCard";
+'use client'
 
-export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+import { useState, useEffect } from 'react'
+import Image from 'next/image'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Slider } from '@/components/ui/slider'
+import { Download, RefreshCw } from 'lucide-react'
 
-  const setupProgress = [
-    { name: "Next.js 15 + TypeScript", status: "completed", description: "Framework base configurado" },
-    { name: "Tailwind CSS + shadcn/ui", status: "completed", description: "Sistema de diseño" },
-    { name: "Estructura de carpetas", status: "completed", description: "Arquitectura escalable" },
-    { name: "Gestión de dependencias", status: "completed", description: "Documentación completa" },
-    { name: "Tipos TypeScript", status: "completed", description: "Definiciones de datos" },
-    { name: "Configuración de servicios", status: "completed", description: "Setup centralizado" },
-    { name: "Supabase", status: "completed", description: "Base de datos y auth - CONFIGURADO ✅" },
-    { name: "Mercado Pago", status: "completed", description: "Sistema de pagos - CONFIGURADO ✅" },
-    { name: "OpenAI GPT-4o", status: "pending", description: "Generación IA" },
-    { name: "Remotion Lambda", status: "pending", description: "Renderizado videos" },
-    { name: "TikTok API", status: "pending", description: "Publicación automática" },
-  ];
+const layoutOptions = [
+  { label: 'Single Post', value: 1 },
+  { label: '3-Post Grid', value: 3 },
+  { label: '6-Post Grid (2x3)', value: 6 },
+  { label: 'Carousel (1–5 slides)', value: 'carousel' }
+]
 
-  const techStack = [
-    {
-      category: "Frontend",
-      icon: <Zap className="h-5 w-5" />,
-      technologies: ["Next.js 15", "React 19", "TypeScript", "Tailwind CSS", "shadcn/ui"]
-    },
-    {
-      category: "Backend & DB",
-      icon: <Database className="h-5 w-5" />,
-      technologies: ["Supabase", "PostgreSQL", "Upstash Redis", "QStash"]
-    },
-    {
-      category: "Video & IA",
-      icon: <Video className="h-5 w-5" />,
-      technologies: ["OpenAI GPT-4o", "Remotion Lambda", "FFmpeg", "TikTok API"]
-    },
-    {
-      category: "Pagos & Monitoring",
-      icon: <CreditCard className="h-5 w-5" />,
-      technologies: ["Mercado Pago", "Highlight.io", "Sentry", "Vercel"]
+export default function SomaImageGen() {
+  const [prompt, setPrompt] = useState('')
+  const [layout, setLayout] = useState<number | string>(1)
+  const [carouselCount, setCarouselCount] = useState(3)
+  const [images, setImages] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
+  const [promptSuggestion, setPromptSuggestion] = useState('')
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false)
+  const [contextPrompt, setContextPrompt] = useState(`
+      Estilo minimalista y sofisticado, usando los colores de marca SOMA: Petróleo (#015965), Pino (#006D5A), Aquamarina (#2FFFCC), Lavanda (#D4C4FC), Negro (#051F22), Blanco (#F7FBFE). Enfoque en la dualidad entre rendimiento y recuperación inteligente.`.trim())
+
+  const generateImages = async () => {
+    setLoading(true)
+    setImages([])
+    const count = layout === 'carousel' ? carouselCount : layout
+
+    try {
+      const res = await fetch('/api/generate/images', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, count, contextPrompt }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to generate images');
+      }
+
+      const { urls } = await res.json()
+      setImages(urls)
+    } catch (error: any) {
+      alert(`Error: ${error.message}`);
+      console.error(error);
+    } finally {
+      setLoading(false)
     }
-  ];
+  }
 
-  const completedCount = setupProgress.filter(item => item.status === "completed").length;
-  const progressPercentage = (completedCount / setupProgress.length) * 100;
+  const generatePromptSuggestion = async () => {
+    setLoadingSuggestion(true)
+
+    try {
+      const brandContext = {
+        brandEssence: {
+          introduction: "SOMA combines advanced technology with human biology, offering intuitive wearable rings that enhance well-being.",
+          targetAudience: "Athletes, executives, and high-performance enthusiasts.",
+          vision: "Lead the wearable tech market in Latin America.",
+          mission: "Create technology that improves and understands health.",
+          pillars: "Connection, Duality, Awareness."
+        },
+        colors: {
+          aquamarina: "#2FFFCC",
+          petroleo: "#015965", 
+          pino: "#006D5A",
+          lavanda: "#D4C4FC",
+          negro: "#051F22",
+          blanco: "#F7FBFE"
+        },
+        contextPrompt: contextPrompt
+      }
+
+      const res = await fetch('/api/prompt/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandContext })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to generate prompt suggestion')
+      }
+
+      const { prompt } = await res.json()
+      setPromptSuggestion(prompt)
+    } catch (error) {
+      console.error('Error generating prompt suggestion:', error)
+      // Show error to user instead of fallback
+      alert('Error generating prompt suggestion. Please try again.')
+    } finally {
+      setLoadingSuggestion(false)
+    }
+  }
+
+  useEffect(() => {
+    generatePromptSuggestion()
+  }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="text-center space-y-4 flex-grow">
-            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              🎬 Reelizalo
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
-              Plataforma SaaS que transforma fotos de productos en videos virales de TikTok usando IA
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <Badge variant="secondary" className="text-sm">
-                MVP en desarrollo
-              </Badge>
-              <Badge variant="outline" className="text-sm">
-                {Math.round(progressPercentage)}% completado
-              </Badge>
+    <div className="min-h-screen" style={{ backgroundColor: '#051F22' }}>
+      {/* Header */}
+      <header className="border-b border-opacity-20" style={{ borderColor: '#006D5A', backgroundColor: '#051F22' }}>
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold text-center tracking-wide" style={{ 
+            color: '#F7FBFE', 
+            fontFamily: 'Saira, sans-serif',
+            lineHeight: '1.3'
+          }}>
+            Generador de Imágenes SOMA
+          </h1>
+                     <p className="text-center mt-3 text-base" style={{ 
+             color: '#2FFFCC',
+             fontFamily: 'Manrope, sans-serif',
+             fontWeight: '400',
+             lineHeight: '1.4'
+           }}>
+             Genera imágenes que capturan la dualidad entre tecnología avanzada y rendimiento humano
+           </p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-6 py-12">
+        {/* Input Section */}
+        <div className="border rounded-lg p-8 mb-12" style={{ 
+          backgroundColor: 'rgba(0, 109, 90, 0.1)',
+          borderColor: 'rgba(0, 109, 90, 0.3)'
+        }}>
+          <div className="space-y-6">
+            
+
+            {/* Context Prompt */}
+            <div className="space-y-3">
+              <label className="block text-lg font-medium" style={{ 
+                color: '#F7FBFE',
+                fontFamily: 'Saira, sans-serif'
+              }}>
+                Contexto de Marca
+              </label>
+              <Textarea
+                className="min-h-[100px] border-2 resize-none transition-colors"
+                style={{ 
+                  backgroundColor: 'rgba(5, 31, 34, 0.5)',
+                  borderColor: '#015965',
+                  color: '#F7FBFE'
+                }}
+                placeholder="Define el contexto de marca para las imágenes generadas..."
+                value={contextPrompt}
+                onChange={(e) => setContextPrompt(e.target.value)}
+                maxLength={500}
+              />
+              <div className="text-sm text-right" style={{ 
+                color: '#2FFFCC',
+                fontFamily: 'Manrope, sans-serif'
+              }}>
+                {contextPrompt.length} / 500
+              </div>
             </div>
-          </div>
-          <div className="flex-shrink-0">
-            <AuthButtons user={user} />
+
+            {/* Prompt Input */}
+            <div className="space-y-3">
+              <label className="block text-lg font-medium" style={{ 
+                color: '#F7FBFE',
+                fontFamily: 'Saira, sans-serif'
+              }}>
+                Describe tu imagen
+              </label>
+              <Textarea
+                className="min-h-[120px] border-2 resize-none transition-colors"
+                style={{ 
+                  backgroundColor: 'rgba(5, 31, 34, 0.5)',
+                  borderColor: '#015965',
+                  color: '#F7FBFE'
+                }}
+                placeholder="Atleta profesional consultando métricas de rendimiento en su anillo SOMA, tecnología avanzada para alto rendimiento..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                maxLength={1000}
+              />
+              <div className="text-sm text-right" style={{ 
+                color: '#2FFFCC',
+                fontFamily: 'Manrope, sans-serif'
+              }}>
+                {prompt.length} / 1000
+              </div>
+            </div>
+
+            {/* Prompt Suggestion */}
+            {promptSuggestion && (
+              <div className="border rounded-lg p-4" style={{ 
+                backgroundColor: 'rgba(1, 89, 101, 0.2)',
+                borderColor: 'rgba(1, 89, 101, 0.4)'
+              }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium uppercase tracking-wider" style={{ 
+                      color: '#2FFFCC',
+                      fontFamily: 'Saira, sans-serif'
+                    }}>
+                      Inspiración
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={generatePromptSuggestion}
+                    disabled={loadingSuggestion}
+                    className="h-8 w-8 p-0 hover:bg-opacity-20"
+                    style={{ 
+                      color: '#2FFFCC',
+                      backgroundColor: 'transparent'
+                    }}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingSuggestion ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+                <p 
+                  className="text-base cursor-pointer hover:opacity-80 transition-opacity leading-relaxed"
+                  style={{ 
+                    color: '#F7FBFE',
+                    fontFamily: 'Manrope, sans-serif'
+                  }}
+                  onClick={() => setPrompt(promptSuggestion)}
+                >
+                  {promptSuggestion}
+                </p>
+              </div>
+            )}
+
+            {/* Layout Options */}
+            <div className="space-y-4">
+              <label className="block text-lg font-medium" style={{ 
+                color: '#F7FBFE',
+                fontFamily: 'Saira, sans-serif'
+              }}>
+                Formato
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {layoutOptions.map((opt) => (
+                  <Button
+                    key={opt.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLayout(opt.value)}
+                    className={`text-sm font-medium transition-colors border-2 ${
+                      layout === opt.value 
+                        ? 'border-opacity-100' 
+                        : 'border-opacity-50 hover:border-opacity-80'
+                    }`}
+                    style={{ 
+                      borderColor: '#015965',
+                      backgroundColor: layout === opt.value ? 'rgba(1, 89, 101, 0.3)' : 'transparent',
+                      color: layout === opt.value ? '#2FFFCC' : '#F7FBFE',
+                      fontFamily: 'Manrope, sans-serif'
+                    }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Carousel Slider */}
+            {layout === 'carousel' && (
+              <div className="space-y-3">
+                <label className="block text-lg font-medium" style={{ 
+                  color: '#F7FBFE',
+                  fontFamily: 'Saira, sans-serif'
+                }}>
+                  Slides: {carouselCount}
+                </label>
+                <Slider
+                  value={[carouselCount]}
+                  min={1}
+                  max={5}
+                  step={1}
+                  onValueChange={(val) => setCarouselCount(val[0])}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            {/* Generate Button */}
+            <Button 
+              onClick={generateImages} 
+              disabled={loading || !prompt.trim()}
+              className="w-full py-4 text-base font-medium tracking-wide transition-all border-2 hover:opacity-90"
+              style={{ 
+                backgroundColor: '#015965',
+                borderColor: '#015965',
+                color: '#F7FBFE',
+                fontFamily: 'Manrope, sans-serif'
+              }}
+            >
+              {loading ? (
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-opacity-30" style={{ 
+                    borderColor: '#2FFFCC',
+                    borderTopColor: 'transparent'
+                  }}></div>
+                  Generando...
+                </div>
+              ) : (
+                'Generar Imágenes'
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Progress Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart className="h-5 w-5" />
-              Progreso del Setup
-            </CardTitle>
-            <CardDescription>
-              Estado actual de la configuración del proyecto
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3">
-              {setupProgress.map((item, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                  {item.status === "completed" ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-600">{item.description}</div>
+        {/* Results Section */}
+        {images.length > 0 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold tracking-wide" style={{ 
+              color: '#F7FBFE',
+              fontFamily: 'Saira, sans-serif',
+              lineHeight: '1.3'
+            }}>
+              Imágenes generadas
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {images.map((src, idx) => (
+                <div key={idx} className="relative group">
+                  <div className="aspect-square rounded-sm overflow-hidden border-2 border-opacity-20" style={{ 
+                    backgroundColor: '#015965',
+                    borderColor: '#006D5A'
+                  }}>
+                    <Image 
+                      src={src} 
+                      alt={`Generated ${idx + 1}`} 
+                      width={400} 
+                      height={400} 
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
                   </div>
-                  <Badge variant={item.status === "completed" ? "default" : "secondary"}>
-                    {item.status === "completed" ? "✅ Listo" : "⏳ Pendiente"}
-                  </Badge>
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
+                    <a
+                      href={src}
+                      download={`soma_image_${idx + 1}.png`}
+                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
+                      style={{ 
+                        backgroundColor: 'rgba(1, 89, 101, 0.9)',
+                        borderColor: '#2FFFCC'
+                      }}
+                    >
+                      <Download className="w-4 h-4" style={{ color: '#2FFFCC' }} />
+                    </a>
+                  </div>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Tech Stack */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {techStack.map((stack, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  {stack.icon}
-                  {stack.category}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {stack.technologies.map((tech, techIndex) => (
-                    <Badge key={techIndex} variant="outline" className="text-xs">
-                      {tech}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Payment Test Section */}
-        {user && (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-800">
-                <CreditCard className="h-5 w-5" />
-                💳 Prueba de Pagos con Mercado Pago
-              </CardTitle>
-              <CardDescription className="text-blue-600">
-                Prueba el sistema de pagos integrado con Mercado Pago Checkout Pro
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PaymentTestCard />
-            </CardContent>
-          </Card>
+          </div>
         )}
-
-        {/* Architecture Diagram */}
-        <Card>
-          <CardHeader>
-            <CardTitle>🏗️ Arquitectura del Sistema</CardTitle>
-            <CardDescription>
-              Flujo de datos desde la carga del producto hasta la publicación en TikTok
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <div className="grid gap-4 md:grid-cols-4 text-center">
-                <div className="space-y-2">
-                  <div className="bg-blue-100 p-4 rounded-lg">
-                    <div className="text-2xl mb-2">📤</div>
-                    <div className="font-medium">Upload</div>
-                    <div className="text-sm text-gray-600">Cloudflare R2</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="bg-green-100 p-4 rounded-lg">
-                    <div className="text-2xl mb-2">🧠</div>
-                    <div className="font-medium">IA</div>
-                    <div className="text-sm text-gray-600">GPT-4o</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="bg-purple-100 p-4 rounded-lg">
-                    <div className="text-2xl mb-2">🎬</div>
-                    <div className="font-medium">Render</div>
-                    <div className="text-sm text-gray-600">Remotion</div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="bg-pink-100 p-4 rounded-lg">
-                    <div className="text-2xl mb-2">📱</div>
-                    <div className="font-medium">Publish</div>
-                    <div className="text-sm text-gray-600">TikTok API</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* OpenAI Test */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BrainCircuit className="h-5 w-5" />
-              🤖 Prueba de Conexión OpenAI
-            </CardTitle>
-            <CardDescription>
-              Verifica que la API de OpenAI esté accesible.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <OpenAITestButton />
-          </CardContent>
-        </Card>
-
-        {/* Supabase Test */}
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-800">
-              <Database className="h-5 w-5" />
-              🗄️ Prueba de Conexión Supabase
-            </CardTitle>
-            <CardDescription className="text-green-600">
-              Verifica que la configuración de Supabase esté funcionando correctamente
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <SupabaseTestButtons />
-              <div className="bg-white p-4 rounded-lg border border-green-200">
-                <h4 className="font-medium text-green-800 mb-2">🔧 Setup Completado:</h4>
-                <ul className="text-sm text-green-700 space-y-1">
-                  <li>✅ Supabase proyecto creado desde Vercel</li>
-                  <li>✅ Variables de entorno configuradas</li>
-                  <li>✅ Cliente Supabase configurado</li>
-                  <li>✅ Middleware de autenticación</li>
-                  <li>⚠️ Falta ejecutar schema SQL en Supabase</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Links */}
-        <Card>
-          <CardHeader>
-            <CardTitle>📚 Documentación y Recursos</CardTitle>
-            <CardDescription>
-              Enlaces útiles para el desarrollo del proyecto
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <Link href="/docs/DEPENDENCY_MANAGEMENT.md" target="_blank">
-                <Button variant="outline" className="w-full justify-start">
-                  📦 Gestión de Dependencias
-                </Button>
-              </Link>
-              <Link href="https://github.com/stefanoucc/reelizalo" target="_blank">
-                <Button variant="outline" className="w-full justify-start">
-                  🐙 Repositorio GitHub
-                </Button>
-              </Link>
-              <Link href="https://ui.shadcn.com/docs" target="_blank">
-                <Button variant="outline" className="w-full justify-start">
-                  🎨 shadcn/ui Docs
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Next Steps */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="text-blue-800">🚀 Próximos Pasos</CardTitle>
-            <CardDescription className="text-blue-600">
-              Tareas prioritarias para completar el MVP
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary">Semana 1</Badge>
-                <span>Configurar Supabase y sistema de autenticación</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary">Semana 2</Badge>
-                <span>Integrar OpenAI GPT-4o y sistema de colas</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary">Semana 3</Badge>
-                <span>Implementar Remotion y TikTok API</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Badge variant="secondary">Semana 4</Badge>
-                <span>Integrar pagos y monitoring</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <div className="text-center text-gray-500 text-sm">
-          <p>
-            ✨ Desarrollado con ❤️ para revolucionar el marketing de productos en TikTok
-          </p>
-          <p className="mt-2">
-            Next.js 15 • TypeScript • shadcn/ui • Tailwind CSS
-          </p>
-        </div>
-      </div>
+      </main>
     </div>
-  );
+  )
 }
