@@ -13,7 +13,7 @@ export default function PaymentFailurePage() {
               <XCircle className="w-8 h-8 text-red-600" />
             </div>
             <CardTitle className="text-2xl font-bold text-red-800">
-              Pago Fallido 🚨
+              Pago Fallido
             </CardTitle>
             <CardDescription className="text-red-600">
               No se pudo procesar tu pago

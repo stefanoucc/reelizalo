@@ -1,0 +1,143 @@
+import { NextResponse } from 'next/server'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+// SOMA Brand Context
+const SOMA_BRAND_CONTEXT = `
+SOMA: High-performance wearable technology brand
+Style: Contemplative, artistic, minimalist with sophisticated aesthetic
+Colors: Petróleo (#015965), Pino (#006D5A), Aquamarina (#2FFFCC), Lavanda (#D4C4FC), Negro (#051F22), Blanco (#F7FBFE)
+Focus: Technology and human well-being connection, performance optimization, wellness
+`
+
+function enhancePromptWithBrand(userPrompt: string): string {
+  return `Create an image for SOMA wearable technology brand: ${SOMA_BRAND_CONTEXT}
+
+User request: ${userPrompt}
+
+Style: Sophisticated, contemplative, using SOMA brand colors. Focus on technology and human well-being connection.`;
+}
+
+export async function POST(req: Request) {
+  console.log('🚀 [Generate Images API] Request received');
+  
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.error("❌ CRITICAL: OPENAI_API_KEY environment variable not found.");
+    return NextResponse.json({ error: 'The OpenAI API key is not configured on the server. Please check your .env.local file and restart the server.' }, { status: 500 });
+  }
+  console.log('✅ API Key found');
+
+  try {
+    const { prompt, count } = await req.json()
+    console.log('📝 Request data:', { prompt: prompt?.substring(0, 100) + '...', count });
+
+    if (!prompt || !count) {
+      console.log('❌ Missing required fields:', { prompt: !!prompt, count: !!count });
+      return NextResponse.json({ error: 'Prompt and count are required' }, { status: 400 });
+    }
+
+    if (prompt.length > 1000) {
+      console.log('❌ Prompt too long:', prompt.length, 'characters');
+      return NextResponse.json({ error: 'Prompt cannot be longer than 1000 characters.' }, { status: 400 });
+    }
+
+    console.log('🔄 Enhancing prompt with SOMA brand context...');
+    // Enhance the user's prompt with SOMA brand context
+    const enhancedPrompt = enhancePromptWithBrand(prompt);
+    console.log('📏 Enhanced prompt length:', enhancedPrompt.length);
+    console.log('📄 Enhanced prompt preview:', enhancedPrompt.substring(0, 200) + '...');
+
+    // Generate images using gpt-image-1 with timeout
+    console.log('🎨 Starting image generation with gpt-image-1 model...');
+    const imagePromises = [];
+    for (let i = 0; i < count; i++) {
+      console.log(`🔄 Creating promise ${i + 1}/${count}`);
+      const promise = Promise.race([
+        openai.images.generate({
+          model: "dall-e-3",
+          prompt: enhancedPrompt,
+          n: 1, // Each request can only be for one image
+          size: '1024x1024',
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
+        )
+      ]);
+      imagePromises.push(promise);
+    }
+
+    console.log('⏳ Waiting for all image generation promises...');
+    const responses = await Promise.all(imagePromises);
+    console.log('✅ Image generation completed, responses received:', responses.length);
+    
+    // Each response contains one image URL. We need to collect them all.
+    console.log('🔗 Extracting URLs from responses...');
+    console.log('🔍 Raw responses structure:', {
+      length: responses.length,
+      type: typeof responses,
+      isArray: Array.isArray(responses)
+    });
+    
+    const urls = responses.flatMap((response: any) => {
+      console.log('🔍 Processing response type:', typeof response);
+      console.log('🔍 Response keys:', Object.keys(response || {}));
+      console.log('🔍 Response data type:', typeof response?.data);
+      console.log('🔍 Response data:', response?.data);
+      
+      if (response?.data && Array.isArray(response.data)) {
+        const responseUrls = response.data.map((img: any, index: number) => {
+          console.log(`🔍 Image ${index} object:`, img);
+          console.log(`🔍 Image ${index} keys:`, Object.keys(img || {}));
+          
+          // Handle b64_json format (gpt-image-1)
+          if (img.b64_json) {
+            console.log(`🔍 Image ${index} has b64_json data`);
+            return `data:image/png;base64,${img.b64_json}`;
+          }
+          
+          // Handle URL format (dall-e models)
+          if (img.url) {
+            console.log(`🔍 Image ${index} has URL:`, img.url);
+            return img.url;
+          }
+          
+          console.log(`🔍 Image ${index} has no valid format`);
+          return null;
+        }).filter((url: any): url is string => !!url);
+        
+        console.log('🔍 URLs from this response:', responseUrls);
+        return responseUrls;
+      } else if (response?.data && typeof response.data === 'object') {
+        console.log('🔍 Response.data is object, not array');
+        console.log('🔍 Response.data keys:', Object.keys(response.data));
+        return [];
+      }
+      
+      console.log('🔍 No data or invalid data structure in response');
+      return [];
+    });
+
+    console.log('🎯 Generated URLs count:', urls.length);
+    console.log('🔗 URLs:', urls);
+    console.log('✅ [Generate Images API] Success - returning URLs');
+    return NextResponse.json({ urls });
+  } catch (error: any) {
+    console.error('❌ [Generate Images API Error]', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    // It's good practice to check if the error is an OpenAI error
+    if (error instanceof OpenAI.APIError) {
+      console.log('🔍 OpenAI API Error detected');
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    
+    console.log('🔍 Generic error - returning error message');
+    return NextResponse.json({ error: error.message || 'An unexpected error occurred.' }, { status: 500 });
+  }
+}

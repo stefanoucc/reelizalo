@@ -10,6 +10,11 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
+        aquamarina: '#2FFFCC',
+        petroleo: '#015965',
+        lavanda: '#D4C4FC',
+        negro: '#051F22',
+        blanco: '#F7FBFE',
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))'
@@ -53,6 +58,8 @@ const config: Config = {
   			}
   		},
   		fontFamily: {
+        heading: ['Saira', 'sans-serif'],
+        body: ['Manrope', 'sans-serif'],
   			satoshi: [
   				'Satoshi',
   				'sans-serif'
