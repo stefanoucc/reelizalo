@@ -27,15 +27,14 @@ NEXT_PUBLIC_APP_NAME=Reelizalo
 # ⭐ REQUERIDO PARA EMPEZAR
 # Obtener de: https://supabase.com/dashboard/projects
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmdXpreHJlaHV3cHNjeW16cGhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMjg1OTIsImV4cCI6MjA2NjgwNDU5Mn0.Hb4_VImRbtqsD95icM7iQrDNcSk_hQt8c52anrtpYGo
 
 # ==============================================
 # 🤖 OPENAI (GPT-4o for Storyboards)
 # ==============================================
 # ⭐ CRÍTICO PARA GENERACIÓN DE IA
 # Obtener de: https://platform.openai.com/api-keys
-OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxx
+
 
 # ==============================================
 # ☁️ CLOUDFLARE R2 (File Storage)
