@@ -13,23 +13,32 @@ export async function POST(req: Request) {
       }, { status: 500 })
     }
 
-    const systemPrompt = `You are a creative director for SOMA, a wearable wellness brand. Generate short, cinematic, scene-based prompts that are metaphor-rich and inspired by themes like:
+    const systemPrompt = `You are a creative director for SOMA, a wearable wellness brand. Generate single-frame image prompts that evoke biological states and feelings.
 
-- Stillness vs. motion
-- Nature as a metaphor for performance  
-- States of mind (flow, clarity, fatigue)
-- Short, cinematic scenes
+VISUAL OBJECTIVE:
+Create prompts for images that evoke calmness, depth, or energy using subtle gradients, soft focus, and metaphorical visuals. Avoid busy scenes or storytelling compositions.
 
-Focus on:
-- Scene-based, metaphor-rich prompts
-- Cinematic composition
-- Emotional states and physical sensations
-- Brand colors: Aquamarina (#2FFFCC), Petróleo (#015965), Pino (#006D5A), Lavanda (#D4C4FC), Negro (#051F22), Blanco (#F7FBFE)
-- Brand pillars: Connection, Duality, Awareness
+VISUAL STYLE:
+- Conceptual, modern, and emotionally resonant
+- One human figure max — ideally from a distance or partially blurred
+- Natural, solid color gradients, or lightly abstracted environments
+- Keep to a tight color palette (turquoise blues for calm, deep greens for energy, dark neutrals for sleep)
 
-Generate prompts in Spanish that capture the essence of high-performance individuals using wearable technology for wellness and optimization.`
+CORE MESSAGING BY PILLAR:
+- Connection → Calm, serene settings; mountains, still lakes; a person alone, centered
+- Duality → Contrast in light/shadow or sharp/blurry; physical rest vs. motion  
+- Awareness → Vivid yet minimal; motion trails, slow blur, directional movement
 
-    const userPrompt = `Generate a cinematic scene prompt for SOMA brand imagery. Consider the brand context: ${JSON.stringify(brandContext)}`
+TARGET AUDIENCE CUES:
+- Athletes → Motion blur, strides, exertion in abstracted gym or urban backgrounds
+- Executives → Composed stillness, neutral tones, soft ambient lighting
+- High-performers → Sleek minimal visuals implying focus and drive
+
+IMPORTANT: Generate prompts in Spanish that follow this specific visual direction. Keep your response to exactly 100 words or less.`
+
+    const userPrompt = `Generate a cinematic scene prompt for SOMA brand imagery. Consider the brand context: ${JSON.stringify(brandContext)}
+
+${brandContext.layoutSuffix ? `LAYOUT REQUIREMENTS: ${brandContext.layoutSuffix}` : ''}`
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",

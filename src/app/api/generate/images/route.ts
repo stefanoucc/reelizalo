@@ -11,10 +11,24 @@ Colors: Petróleo (#015965), Pino (#006D5A), Aquamarina (#2FFFCC), Lavanda (#D4C
 Focus: Technology and human well-being connection, performance optimization, wellness
 `
 
-function enhancePromptWithBrand(userPrompt: string): string {
+function enhancePromptWithBrand(userPrompt: string, count: number): string {
+  let layoutInstructions = ''
+  
+  if (count === 3) {
+    layoutInstructions = 'Create a wide horizontal image in 3:1 aspect ratio designed to be split into three equal square parts for Instagram grid. Each third should work as a standalone post but flow seamlessly together.'
+  } else if (count === 6) {
+    layoutInstructions = 'Create a wide horizontal image in 3:2 aspect ratio designed to be split into six equal square parts (2 rows, 3 columns) for Instagram grid. Each square should work as a standalone post but flow seamlessly together.'
+  } else if (count === 1) {
+    layoutInstructions = 'Create a single square image (1:1 aspect ratio) optimized for Instagram feed posts.'
+  } else {
+    layoutInstructions = 'Create multiple square images optimized for Instagram carousel posts.'
+  }
+
   return `Create an image for SOMA wearable technology brand: ${SOMA_BRAND_CONTEXT}
 
 User request: ${userPrompt}
+
+Layout requirements: ${layoutInstructions}
 
 Style: Sophisticated, contemplative, using SOMA brand colors. Focus on technology and human well-being connection.`;
 }
@@ -45,7 +59,7 @@ export async function POST(req: Request) {
 
     console.log('🔄 Enhancing prompt with SOMA brand context...');
     // Enhance the user's prompt with SOMA brand context
-    const enhancedPrompt = enhancePromptWithBrand(prompt);
+    const enhancedPrompt = enhancePromptWithBrand(prompt, count);
     console.log('📏 Enhanced prompt length:', enhancedPrompt.length);
     console.log('📄 Enhanced prompt preview:', enhancedPrompt.substring(0, 200) + '...');
 

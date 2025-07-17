@@ -5,13 +5,33 @@ import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
-import { Download, RefreshCw } from 'lucide-react'
+import { Download, RefreshCw, Copy } from 'lucide-react'
 
 const layoutOptions = [
-  { label: 'Single Post', value: 1 },
-  { label: '3-Post Grid', value: 3 },
-  { label: '6-Post Grid (2x3)', value: 6 },
-  { label: 'Carousel (1–5 slides)', value: 'carousel' }
+  { 
+    label: 'Single Post', 
+    value: 1, 
+    description: 'One standalone square image (1:1) for Instagram.',
+    promptSuffix: 'Create a single square image (1:1 aspect ratio) optimized for Instagram feed posts.'
+  },
+  { 
+    label: '3-Post Grid', 
+    value: 3, 
+    description: 'One wide horizontal image split into 3 square parts. Each part is a separate IG post, but together they form a single cohesive visual.',
+    promptSuffix: 'Create a wide horizontal image in a 3:1 aspect ratio (e.g. 3000x1000 px) designed to be split into three equal square parts. Each third will be posted individually on Instagram, but when viewed together in order, they should form a single, seamless, and visually compelling story. Avoid placing central elements on the edges of each third; ensure the composition flows naturally across all three sections.'
+  },
+  { 
+    label: '6-Post Grid (2x3)', 
+    value: 6, 
+    description: 'A grid made of 6 square posts (2 rows, 3 columns) that together form one large image on the IG profile grid.',
+    promptSuffix: 'Create a wide horizontal image in a 3:2 aspect ratio (e.g. 3000x2000 px) designed to be split into six equal square parts arranged in 2 rows of 3 columns. Each square will be posted individually on Instagram, but when viewed together in the profile grid, they should form a single, seamless, and visually compelling story. Avoid placing central elements on the edges of each square; ensure the composition flows naturally across all six sections.'
+  },
+  { 
+    label: 'Carousel (1–5 slides)', 
+    value: 'carousel', 
+    description: 'Multiple square images for Instagram carousel posts.',
+    promptSuffix: 'Create multiple square images (1:1 aspect ratio) optimized for Instagram carousel posts. Each image should be visually connected but can stand alone as individual posts.'
+  }
 ]
 
 export default function SomaImageGen() {
@@ -23,7 +43,12 @@ export default function SomaImageGen() {
   const [promptSuggestion, setPromptSuggestion] = useState('')
   const [loadingSuggestion, setLoadingSuggestion] = useState(false)
   const [contextPrompt, setContextPrompt] = useState(`
-      Estilo minimalista y sofisticado, usando los colores de marca SOMA: Petróleo (#015965), Pino (#006D5A), Aquamarina (#2FFFCC), Lavanda (#D4C4FC), Negro (#051F22), Blanco (#F7FBFE). Enfoque en la dualidad entre rendimiento y recuperación inteligente.`.trim())
+      Estilo minimalista y sofisticado, usando los colores de marca SOMA: Petróleo (#015965), Pino (#006D5A), Aquamarina (#2FFFCC), Lavanda (#D4C4FC), Negro (#051F22), Blanco (#F7FBFE). Enfoque en la dualidad entre rendimiento y recuperación inteligente. No incluir ningún tipo de texto, tipografía, letra, número o palabra en la imagen generada. La imagen debe ser completamente visual, sin ningún elemento textual.`.trim())
+  
+  // Text generation states
+  const [generatedTexts, setGeneratedTexts] = useState<string[]>([])
+  const [loadingText, setLoadingText] = useState(false)
+  const [favoriteTexts, setFavoriteTexts] = useState<string[]>([])
 
   const generateImages = async () => {
     setLoading(true)
@@ -56,13 +81,29 @@ export default function SomaImageGen() {
     setLoadingSuggestion(true)
 
     try {
+      // Get the current layout option to include its prompt suffix
+      const currentLayout = layoutOptions.find(opt => opt.value === layout)
+      const layoutSuffix = currentLayout?.promptSuffix || ''
+
       const brandContext = {
-        brandEssence: {
-          introduction: "SOMA combines advanced technology with human biology, offering intuitive wearable rings that enhance well-being.",
-          targetAudience: "Athletes, executives, and high-performance enthusiasts.",
-          vision: "Lead the wearable tech market in Latin America.",
-          mission: "Create technology that improves and understands health.",
-          pillars: "Connection, Duality, Awareness."
+        introduction: "SOMA merges minimalist design with human vitality. Through wearable rings, we visualize states of being: balance, rest, movement.",
+        visualObjective: "Create single-frame images that evoke a feeling or biological state — calmness, depth, energy — using subtle gradients, soft focus, and metaphorical visuals. Avoid busy scenes or storytelling compositions.",
+        visualStyle: {
+          concept: "Conceptual, modern, and emotionally resonant",
+          humanFigure: "Use one human figure max — ideally from a distance or partially blurred",
+          backgrounds: "Natural, solid color gradients, or lightly abstracted environments",
+          textPlacement: "Central or slightly offset, clean sans-serif font",
+          colorTone: "Keep to a tight palette (e.g., turquoise blues for calm, deep greens for energy, dark neutrals for sleep)"
+        },
+        coreMessaging: {
+          connection: "Calm, serene settings; mountains, still lakes; a person alone, centered",
+          duality: "Contrast in light/shadow or sharp/blurry; physical rest vs. motion",
+          awareness: "Vivid yet minimal; motion trails, slow blur, directional movement"
+        },
+        targetAudience: {
+          athletes: "Motion blur, strides, exertion in abstracted gym or urban backgrounds",
+          executives: "Composed stillness, neutral tones, soft ambient lighting",
+          highPerformers: "Sleek minimal visuals implying focus and drive"
         },
         colors: {
           aquamarina: "#2FFFCC",
@@ -72,7 +113,8 @@ export default function SomaImageGen() {
           negro: "#051F22",
           blanco: "#F7FBFE"
         },
-        contextPrompt: contextPrompt
+        contextPrompt: contextPrompt,
+        layoutSuffix: layoutSuffix
       }
 
       const res = await fetch('/api/prompt/suggest', {
@@ -95,6 +137,58 @@ export default function SomaImageGen() {
     } finally {
       setLoadingSuggestion(false)
     }
+  }
+
+  const generateText = async () => {
+    setLoadingText(true)
+
+    try {
+      const res = await fetch('/api/generate/text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          brandContext: contextPrompt,
+          favoriteTexts: favoriteTexts 
+        })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to generate text')
+      }
+
+      const { texts } = await res.json()
+      setGeneratedTexts(texts)
+    } catch (error) {
+      console.error('Error generating text:', error)
+      alert('Error generating text. Please try again.')
+    } finally {
+      setLoadingText(false)
+    }
+  }
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      alert('Texto copiado al portapapeles')
+    } catch (error) {
+      console.error('Error copying text:', error)
+      alert('Error al copiar el texto')
+    }
+  }
+
+  const toggleFavorite = (text: string) => {
+    if (favoriteTexts.includes(text)) {
+      setFavoriteTexts(favoriteTexts.filter(t => t !== text))
+      alert('Texto removido de favoritos')
+    } else {
+      setFavoriteTexts([...favoriteTexts, text])
+      alert('Texto agregado a favoritos')
+    }
+  }
+
+  const removeFavorite = (text: string) => {
+    setFavoriteTexts(favoriteTexts.filter(t => t !== text))
   }
 
   useEffect(() => {
@@ -240,27 +334,39 @@ export default function SomaImageGen() {
               }}>
                 Formato
               </label>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {layoutOptions.map((opt) => (
-                  <Button
+                  <div
                     key={opt.label}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setLayout(opt.value)}
-                    className={`text-sm font-medium transition-colors border-2 ${
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       layout === opt.value 
                         ? 'border-opacity-100' 
                         : 'border-opacity-50 hover:border-opacity-80'
                     }`}
                     style={{ 
                       borderColor: '#015965',
-                      backgroundColor: layout === opt.value ? 'rgba(1, 89, 101, 0.3)' : 'transparent',
-                      color: layout === opt.value ? '#2FFFCC' : '#F7FBFE',
-                      fontFamily: 'Manrope, sans-serif'
+                      backgroundColor: layout === opt.value ? 'rgba(1, 89, 101, 0.3)' : 'rgba(1, 89, 101, 0.1)',
                     }}
+                    onClick={() => setLayout(opt.value)}
                   >
-                    {opt.label}
-                  </Button>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-sm" style={{ 
+                        color: layout === opt.value ? '#2FFFCC' : '#F7FBFE',
+                        fontFamily: 'Saira, sans-serif'
+                      }}>
+                        {opt.label}
+                      </h3>
+                      {layout === opt.value && (
+                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2FFFCC' }}></div>
+                      )}
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ 
+                      color: layout === opt.value ? 'rgba(47, 255, 204, 0.8)' : 'rgba(247, 251, 254, 0.7)',
+                      fontFamily: 'Manrope, sans-serif'
+                    }}>
+                      {opt.description}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
@@ -340,7 +446,7 @@ export default function SomaImageGen() {
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
                     <a
                       href={src}
-                      download={`soma_image_${idx + 1}.png`}
+                      download={`soma_${layout === 3 ? '3grid' : layout === 6 ? '6grid' : layout === 'carousel' ? 'carousel' : 'single'}_${idx + 1}.png`}
                       className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
                       style={{ 
                         backgroundColor: 'rgba(1, 89, 101, 0.9)',
@@ -355,6 +461,190 @@ export default function SomaImageGen() {
             </div>
           </div>
         )}
+
+        {/* Text Generation Section */}
+        <div className="border rounded-lg p-8 mb-12" style={{ 
+          backgroundColor: 'rgba(0, 109, 90, 0.1)',
+          borderColor: 'rgba(0, 109, 90, 0.3)'
+        }}>
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold tracking-wide mb-2" style={{ 
+                color: '#F7FBFE',
+                fontFamily: 'Saira, sans-serif',
+                lineHeight: '1.3'
+              }}>
+                Texto sugerido para la imagen
+              </h2>
+              <p className="text-sm" style={{ 
+                color: '#2FFFCC',
+                fontFamily: 'Manrope, sans-serif'
+              }}>
+                Genera frases breves y reflexivas para acompañar tus imágenes
+              </p>
+            </div>
+
+            {/* Generate Text Button */}
+            <Button 
+              onClick={generateText} 
+              disabled={loadingText}
+              className="w-full py-4 text-base font-medium tracking-wide transition-all border-2 hover:opacity-90"
+              style={{ 
+                backgroundColor: '#015965',
+                borderColor: '#015965',
+                color: '#F7FBFE',
+                fontFamily: 'Manrope, sans-serif'
+              }}
+            >
+              {loadingText ? (
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-opacity-30" style={{ 
+                    borderColor: '#2FFFCC',
+                    borderTopColor: 'transparent'
+                  }}></div>
+                  Generando...
+                </div>
+              ) : (
+                'Generar texto'
+              )}
+            </Button>
+
+            {/* Generated Text Display */}
+            {generatedTexts.length > 0 && (
+              <div className="border rounded-lg p-6" style={{ 
+                backgroundColor: 'rgba(1, 89, 101, 0.2)',
+                borderColor: 'rgba(1, 89, 101, 0.4)'
+              }}>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-medium uppercase tracking-wider" style={{ 
+                    color: '#2FFFCC',
+                    fontFamily: 'Saira, sans-serif'
+                  }}>
+                    Textos generados
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={generateText}
+                      disabled={loadingText}
+                      className="h-8 px-3 hover:bg-opacity-20 text-xs"
+                      style={{ 
+                        color: '#2FFFCC',
+                        backgroundColor: 'transparent',
+                        borderColor: '#2FFFCC',
+                        border: '1px solid'
+                      }}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${loadingText ? 'animate-spin' : ''}`} />
+                      Regenerar
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {generatedTexts.map((text, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg" style={{ 
+                      backgroundColor: 'rgba(5, 31, 34, 0.3)',
+                      border: '1px solid rgba(1, 89, 101, 0.3)'
+                    }}>
+                      <p 
+                        className="text-lg font-medium flex-1 text-center"
+                        style={{ 
+                          color: '#F7FBFE',
+                          fontFamily: 'Saira, sans-serif'
+                        }}
+                      >
+                        {text}
+                      </p>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(text)}
+                          className="h-8 w-8 p-0 hover:bg-opacity-20"
+                          style={{ 
+                            color: '#2FFFCC',
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleFavorite(text)}
+                          className="h-8 w-8 p-0 hover:bg-opacity-20"
+                          style={{ 
+                            color: favoriteTexts.includes(text) ? '#FFD700' : '#2FFFCC',
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          ★
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {favoriteTexts.length > 0 && (
+                  <div className="mt-4 p-4 rounded-lg" style={{ 
+                    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                    border: '1px solid rgba(255, 215, 0, 0.3)'
+                  }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium" style={{ 
+                        color: '#FFD700',
+                        fontFamily: 'Saira, sans-serif'
+                      }}>
+                        FAVORITOS ({favoriteTexts.length})
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFavoriteTexts([])}
+                        className="h-6 px-2 text-xs hover:bg-opacity-20"
+                        style={{ 
+                          color: '#FFD700',
+                          backgroundColor: 'transparent',
+                          borderColor: '#FFD700',
+                          border: '1px solid'
+                        }}
+                      >
+                        Limpiar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {favoriteTexts.map((text, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 rounded" style={{ 
+                          backgroundColor: 'rgba(255, 215, 0, 0.1)',
+                          border: '1px solid rgba(255, 215, 0, 0.2)'
+                        }}>
+                          <p className="text-sm flex-1" style={{ 
+                            color: '#F7FBFE',
+                            fontFamily: 'Saira, sans-serif'
+                          }}>
+                            {text}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFavorite(text)}
+                            className="h-6 w-6 p-0 hover:bg-opacity-20 ml-2"
+                            style={{ 
+                              color: '#FFD700',
+                              backgroundColor: 'transparent'
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )
