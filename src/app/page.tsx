@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Slider } from '@/components/ui/slider'
 import { Download, RefreshCw, Copy } from 'lucide-react'
+import CanvasEditor from '@/components/canvas/CanvasEditor'
 
 const layoutOptions = [
   { 
@@ -49,6 +50,9 @@ export default function SomaImageGen() {
   const [generatedTexts, setGeneratedTexts] = useState<string[]>([])
   const [loadingText, setLoadingText] = useState(false)
   const [favoriteTexts, setFavoriteTexts] = useState<string[]>([])
+
+  const [canvasEditorOpen, setCanvasEditorOpen] = useState(false)
+  const [selectedImageForCanvas, setSelectedImageForCanvas] = useState<string | null>(null)
 
   const generateImages = async () => {
     setLoading(true)
@@ -443,11 +447,11 @@ export default function SomaImageGen() {
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300">
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex flex-col justify-end items-end p-3">
                     <a
                       href={src}
                       download={`soma_${layout === 3 ? '3grid' : layout === 6 ? '6grid' : layout === 'carousel' ? 'carousel' : 'single'}_${idx + 1}.png`}
-                      className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
+                      className="mb-2 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
                       style={{ 
                         backgroundColor: 'rgba(1, 89, 101, 0.9)',
                         borderColor: '#2FFFCC'
@@ -455,13 +459,36 @@ export default function SomaImageGen() {
                     >
                       <Download className="w-4 h-4" style={{ color: '#2FFFCC' }} />
                     </a>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedImageForCanvas(src)
+                        setCanvasEditorOpen(true)
+                      }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
+                      style={{ 
+                        backgroundColor: 'rgba(1, 89, 101, 0.9)',
+                        borderColor: '#2FFFCC',
+                        color: '#2FFFCC',
+                        marginTop: '0.5rem'
+                      }}
+                    >
+                      Editar en Canvas
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
-
+        {/* Canvas Editor Integration */}
+        <CanvasEditor
+          isOpen={canvasEditorOpen}
+          onClose={() => setCanvasEditorOpen(false)}
+          selectedImage={selectedImageForCanvas}
+          generatedTexts={generatedTexts}
+        />
         {/* Text Generation Section */}
         <div className="border rounded-lg p-8 mb-12" style={{ 
           backgroundColor: 'rgba(0, 109, 90, 0.1)',
