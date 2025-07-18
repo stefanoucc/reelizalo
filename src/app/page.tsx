@@ -32,6 +32,43 @@ const layoutOptions = [
     value: 'carousel', 
     description: 'Multiple square images for Instagram carousel posts.',
     promptSuffix: 'Create multiple square images (1:1 aspect ratio) optimized for Instagram carousel posts. Each image should be visually connected but can stand alone as individual posts.'
+  },
+  {
+    label: 'Pipeline por Intención',
+    value: 'intent-pipeline',
+    description: 'Selecciona una intención (Sleep, Focus, Recovery) y genera automáticamente imágenes + textos cohesivos.',
+    promptSuffix: 'Create images that align with the selected intent and brand values.'
+  },
+  {
+    label: 'Carrusel Narrativo',
+    value: 'narrative-carousel',
+    description: 'Historia de 4-5 slides siguiendo el arco: Hook → Conflicto → Insight → CTA suave.',
+    promptSuffix: 'Create a narrative sequence of images that tells a story following the hook-conflict-insight-CTA structure.'
+  }
+]
+
+// Intent options - add this as a new constant
+const intentOptions = [
+  {
+    value: 'sleep',
+    label: 'Sleep',
+    description: 'Descanso profundo y recuperación nocturna',
+    colors: ['#015965', '#051F22', '#D4C4FC'],
+    tone: 'calming, restorative, peaceful'
+  },
+  {
+    value: 'focus',
+    label: 'Focus',
+    description: 'Concentración y productividad inteligente',
+    colors: ['#006D5A', '#2FFFCC', '#051F22'],
+    tone: 'sharp, clear, intentional'
+  },
+  {
+    value: 'recovery',
+    label: 'Recovery',
+    description: 'Recuperación activa y balance',
+    colors: ['#2FFFCC', '#015965', '#F7FBFE'],
+    tone: 'balanced, rejuvenating, harmonious'
   }
 ]
 
@@ -39,6 +76,10 @@ export default function SomaImageGen() {
   const [prompt, setPrompt] = useState('')
   const [layout, setLayout] = useState<number | string>(1)
   const [carouselCount, setCarouselCount] = useState(3)
+  const [selectedIntent, setSelectedIntent] = useState<string>('sleep')
+  const [narrativeTheme, setNarrativeTheme] = useState<string>('')
+  const [intentPipelineResults, setIntentPipelineResults] = useState<any>(null)
+  const [narrativeResults, setNarrativeResults] = useState<any>(null)
   const [images, setImages] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [promptSuggestion, setPromptSuggestion] = useState('')
@@ -57,25 +98,65 @@ export default function SomaImageGen() {
   const generateImages = async () => {
     setLoading(true)
     setImages([])
-    const count = layout === 'carousel' ? carouselCount : layout
+    setGeneratedTexts([])
+    setIntentPipelineResults(null)
+    setNarrativeResults(null)
 
     try {
-      const res = await fetch('/api/generate/images', {
+      let endpoint = '/api/generate/images'
+      let requestBody: any = { prompt, count: 1, contextPrompt }
+
+      // Handle different layout types
+      if (layout === 'intent-pipeline') {
+        endpoint = '/api/generate/intent-pipeline'
+        requestBody = {
+          intent: selectedIntent,
+          contextPrompt,
+          brandColors: intentOptions.find(opt => opt.value === selectedIntent)?.colors || [],
+          tone: intentOptions.find(opt => opt.value === selectedIntent)?.tone || 'balanced'
+        }
+      } else if (layout === 'narrative-carousel') {
+        endpoint = '/api/generate/narrative-carousel'
+        requestBody = {
+          intent: selectedIntent,
+          theme: narrativeTheme,
+          contextPrompt,
+          brandColors: intentOptions.find(opt => opt.value === selectedIntent)?.colors || []
+        }
+      } else {
+        // Regular generation
+        const count = layout === 'carousel' ? carouselCount : (typeof layout === 'number' ? layout : 1)
+        requestBody.count = count
+      }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, count, contextPrompt }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to generate images');
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to generate content')
       }
 
-      const { urls } = await res.json()
-      setImages(urls)
+      const result = await res.json()
+      
+      if (layout === 'intent-pipeline') {
+        setIntentPipelineResults(result)
+        setImages(result.images || [])
+        setGeneratedTexts(result.texts || [])
+      } else if (layout === 'narrative-carousel') {
+        setNarrativeResults(result)
+        setImages(result.images || [])
+        setGeneratedTexts(result.slideTexts || [])
+      } else {
+        setImages(result.urls || [])
+      }
+
     } catch (error: any) {
-      alert(`Error: ${error.message}`);
-      console.error(error);
+      alert(`Error: ${error.message}`)
+      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -395,6 +476,86 @@ export default function SomaImageGen() {
               </div>
             )}
 
+            {/* Intent Selection - Add this after layout options */}
+            {(layout === 'intent-pipeline' || layout === 'narrative-carousel') && (
+              <div className="space-y-4">
+                <label className="block text-lg font-medium" style={{ 
+                  color: '#F7FBFE',
+                  fontFamily: 'Saira, sans-serif'
+                }}>
+                  {layout === 'intent-pipeline' ? 'Selecciona la intención' : 'Tema central del conflicto'}
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {intentOptions.map((intent) => (
+                    <div
+                      key={intent.value}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        selectedIntent === intent.value 
+                          ? 'border-opacity-100' 
+                          : 'border-opacity-50 hover:border-opacity-80'
+                      }`}
+                      style={{ 
+                        borderColor: '#015965',
+                        backgroundColor: selectedIntent === intent.value ? 'rgba(1, 89, 101, 0.3)' : 'rgba(1, 89, 101, 0.1)',
+                      }}
+                      onClick={() => setSelectedIntent(intent.value)}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-sm" style={{ 
+                          color: selectedIntent === intent.value ? '#2FFFCC' : '#F7FBFE',
+                          fontFamily: 'Saira, sans-serif'
+                        }}>
+                          {intent.label}
+                        </h3>
+                        {selectedIntent === intent.value && (
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#2FFFCC' }}></div>
+                        )}
+                      </div>
+                      <p className="text-xs leading-relaxed mb-2" style={{ 
+                        color: selectedIntent === intent.value ? 'rgba(47, 255, 204, 0.8)' : 'rgba(247, 251, 254, 0.7)',
+                        fontFamily: 'Manrope, sans-serif'
+                      }}>
+                        {intent.description}
+                      </p>
+                      <div className="flex gap-1">
+                        {intent.colors.map((color, idx) => (
+                          <div
+                            key={idx}
+                            className="w-4 h-4 rounded-full border border-white border-opacity-20"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Narrative Theme Input - Add this for narrative carousel */}
+            {layout === 'narrative-carousel' && (
+              <div className="space-y-3">
+                <label className="block text-lg font-medium" style={{ 
+                  color: '#F7FBFE',
+                  fontFamily: 'Saira, sans-serif'
+                }}>
+                  Describe el conflicto o lucha central
+                </label>
+                <Textarea
+                  className="min-h-[80px] border-2 resize-none transition-colors"
+                  style={{ 
+                    backgroundColor: 'rgba(5, 31, 34, 0.5)',
+                    borderColor: '#015965',
+                    color: '#F7FBFE'
+                  }}
+                  placeholder="Ej: Duermo 8 horas pero sigo cansado, siempre ocupado pero no productivo..."
+                  value={narrativeTheme}
+                  onChange={(e) => setNarrativeTheme(e.target.value)}
+                  maxLength={200}
+                />
+              </div>
+            )}
+
             {/* Generate Button */}
             <Button 
               onClick={generateImages} 
@@ -450,7 +611,14 @@ export default function SomaImageGen() {
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex flex-col justify-end items-end p-3">
                     <a
                       href={src}
-                      download={`soma_${layout === 3 ? '3grid' : layout === 6 ? '6grid' : layout === 'carousel' ? 'carousel' : 'single'}_${idx + 1}.png`}
+                      download={`soma_${
+                        layout === 3 ? '3grid' : 
+                        layout === 6 ? '6grid' : 
+                        layout === 'carousel' ? 'carousel' : 
+                        layout === 'intent-pipeline' ? `intent-${selectedIntent}` :
+                        layout === 'narrative-carousel' ? 'narrative' :
+                        'single'
+                      }_${idx + 1}.png`}
                       className="mb-2 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-sm border"
                       style={{ 
                         backgroundColor: 'rgba(1, 89, 101, 0.9)',
@@ -480,6 +648,138 @@ export default function SomaImageGen() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TikTok-Style Slideshow Results - Add this after regular image results */}
+        {(intentPipelineResults || narrativeResults) && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold tracking-wide" style={{ 
+              color: '#F7FBFE',
+              fontFamily: 'Saira, sans-serif',
+              lineHeight: '1.3'
+            }}>
+              {layout === 'intent-pipeline' ? 'Pipeline por Intención' : 'Carrusel Narrativo'}
+            </h2>
+            
+            {/* Slideshow Preview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {(intentPipelineResults?.images || narrativeResults?.images || []).map((src: string, idx: number) => (
+                <div key={idx} className="space-y-3">
+                  <div className="aspect-[9/16] rounded-lg overflow-hidden border-2 border-opacity-20 relative" style={{ 
+                    backgroundColor: '#015965',
+                    borderColor: '#006D5A'
+                  }}>
+                    <Image 
+                      src={src} 
+                      alt={`Slide ${idx + 1}`} 
+                      width={300} 
+                      height={533} 
+                      className="w-full h-full object-cover"
+                    />
+                    
+                    {/* Text Overlay Preview */}
+                    {generatedTexts[idx] && (
+                      <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4">
+                        <div className="text-center">
+                          <p className="text-white text-lg font-semibold leading-tight" style={{ 
+                            fontFamily: 'Saira, sans-serif',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                          }}>
+                            {generatedTexts[idx]}
+                          </p>
+                          <div className="mt-2 text-xs text-gray-300">
+                            Slide {idx + 1}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Slide Actions */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm" style={{ 
+                      color: '#2FFFCC',
+                      fontFamily: 'Manrope, sans-serif'
+                    }}>
+                      {layout === 'narrative-carousel' ? 
+                        ['Hook', 'Conflicto', 'Insight', 'CTA', 'Extra'][idx] || `Slide ${idx + 1}` :
+                        `Slide ${idx + 1}`
+                      }
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(generatedTexts[idx] || '')}
+                        className="h-8 w-8 p-0 hover:bg-opacity-20"
+                        style={{ 
+                          color: '#2FFFCC',
+                          backgroundColor: 'transparent'
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                      <a
+                        href={src}
+                        download={`soma_${layout}_slide_${idx + 1}.png`}
+                        className="inline-flex items-center justify-center h-8 w-8 p-0 hover:bg-opacity-20 rounded"
+                        style={{ 
+                          color: '#2FFFCC',
+                          backgroundColor: 'transparent'
+                        }}
+                      >
+                        <Download className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Narrative Structure Preview */}
+            {narrativeResults && (
+              <div className="border rounded-lg p-6" style={{ 
+                backgroundColor: 'rgba(1, 89, 101, 0.2)',
+                borderColor: 'rgba(1, 89, 101, 0.4)'
+              }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ 
+                  color: '#2FFFCC',
+                  fontFamily: 'Saira, sans-serif'
+                }}>
+                  Estructura Narrativa
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {narrativeResults.structure?.map((step: any, idx: number) => (
+                    <div key={idx} className="p-3 rounded" style={{ 
+                      backgroundColor: 'rgba(5, 31, 34, 0.3)',
+                      border: '1px solid rgba(1, 89, 101, 0.3)'
+                    }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ 
+                          backgroundColor: '#2FFFCC',
+                          color: '#051F22'
+                        }}>
+                          {idx + 1}
+                        </div>
+                        <span className="text-sm font-medium" style={{ 
+                          color: '#2FFFCC',
+                          fontFamily: 'Saira, sans-serif'
+                        }}>
+                          {step.type}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed" style={{ 
+                        color: '#F7FBFE',
+                        fontFamily: 'Manrope, sans-serif'
+                      }}>
+                        {step.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         {/* Canvas Editor Integration */}
