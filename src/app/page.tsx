@@ -788,6 +788,7 @@ export default function SomaImageGen() {
           onClose={() => setCanvasEditorOpen(false)}
           selectedImage={selectedImageForCanvas}
           generatedTexts={generatedTexts}
+          favoriteTexts={favoriteTexts}
         />
         {/* Text Generation Section */}
         <div className="border rounded-lg p-8 mb-12" style={{ 
@@ -918,12 +919,20 @@ export default function SomaImageGen() {
                     border: '1px solid rgba(255, 215, 0, 0.3)'
                   }}>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-medium" style={{ 
-                        color: '#FFD700',
-                        fontFamily: 'Saira, sans-serif'
-                      }}>
-                        FAVORITOS ({favoriteTexts.length})
-                      </p>
+                      <div>
+                        <p className="text-xs font-medium" style={{ 
+                          color: '#FFD700',
+                          fontFamily: 'Saira, sans-serif'
+                        }}>
+                          FAVORITOS ({favoriteTexts.length})
+                        </p>
+                        <p className="text-xs mt-1" style={{ 
+                          color: 'rgba(255, 215, 0, 0.7)',
+                          fontFamily: 'Manrope, sans-serif'
+                        }}>
+                          Disponibles en el editor de canvas
+                        </p>
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
