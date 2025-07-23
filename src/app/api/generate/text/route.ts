@@ -19,13 +19,13 @@ Genera frases breves en español (máximo 4 palabras), suaves, directas y reflex
 Evita repetir palabras en frases consecutivas, especialmente términos como "equilibrio", "energía", "salud", etc. Usa verbos o expresiones humanas que evoquen sensación o acción.
 
 Ejemplos:
-- Llega más lejos  
-- Descansa profundo  
-- Mantente estable  
-- Respira sin prisa  
-- Conecta contigo mismo
+Llega más lejos  
+Descansa profundo  
+Mantente estable  
+Respira sin prisa  
+Conecta contigo mismo
 
-IMPORTANTE: Genera exactamente 3 frases diferentes, una por línea.`
+IMPORTANTE: Genera exactamente 3 frases diferentes, una por línea, sin guiones ni símbolos al inicio.`
 
     let userPrompt = `Genera 3 frases breves y reflexivas para SOMA, considerando el contexto de marca: ${brandContext}`
     

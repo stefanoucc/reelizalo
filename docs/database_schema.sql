@@ -23,6 +23,12 @@ CREATE TYPE product_category AS ENUM (
   'automotive', 'books', 'toys', 'food', 'other'
 );
 
+-- Content generation types
+CREATE TYPE generation_type AS ENUM ('single', 'grid_3', 'grid_6', 'carousel', 'intent_pipeline', 'narrative_carousel');
+
+-- Intent types for SOMA brand
+CREATE TYPE intent_type AS ENUM ('sleep', 'focus', 'recovery');
+
 -- ==============================================
 -- 👥 USERS TABLE
 -- ==============================================
@@ -38,6 +44,47 @@ CREATE TABLE users (
   total_videos_generated INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- ==============================================
+-- 📋 PROJECTS TABLE (NEW)
+-- ==============================================
+
+CREATE TABLE projects (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  generation_type generation_type NOT NULL,
+  intent_type intent_type,
+  prompt TEXT NOT NULL,
+  context_prompt TEXT,
+  narrative_theme TEXT,
+  carousel_count INTEGER,
+  brand_colors JSONB,
+  generated_images JSONB, -- Array of image URLs
+  generated_texts JSONB, -- Array of generated text options
+  favorite_texts JSONB, -- Array of favorited texts
+  canvas_data JSONB, -- Canvas editor state
+  is_public BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- ==============================================
+-- 🎨 GENERATED_CONTENT TABLE (NEW)
+-- ==============================================
+
+CREATE TABLE generated_content (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id UUID REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE NOT NULL,
+  content_type VARCHAR(50) NOT NULL, -- 'image' or 'text'
+  content_url TEXT, -- For images
+  content_text TEXT, -- For text
+  generation_params JSONB, -- Store the parameters used for generation
+  is_favorite BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
 -- ==============================================

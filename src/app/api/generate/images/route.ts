@@ -63,8 +63,8 @@ export async function POST(req: Request) {
     console.log('📏 Enhanced prompt length:', enhancedPrompt.length);
     console.log('📄 Enhanced prompt preview:', enhancedPrompt.substring(0, 200) + '...');
 
-    // Generate images using gpt-image-1 with timeout
-    console.log('🎨 Starting image generation with gpt-image-1 model...');
+    // Generate images using dall-e-3 with timeout
+            console.log('🎨 Starting image generation with dall-e-3 model...');
     const imagePromises = [];
     for (let i = 0; i < count; i++) {
       console.log(`🔄 Creating promise ${i + 1}/${count}`);
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
           console.log(`🔍 Image ${index} object:`, img);
           console.log(`🔍 Image ${index} keys:`, Object.keys(img || {}));
           
-          // Handle b64_json format (gpt-image-1)
+          // Handle b64_json format (dall-e-3)
           if (img.b64_json) {
             console.log(`🔍 Image ${index} has b64_json data`);
             return `data:image/png;base64,${img.b64_json}`;
