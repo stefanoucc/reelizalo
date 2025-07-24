@@ -1,20 +1,33 @@
 import { NextResponse } from 'next/server'
 import { openai } from '@/lib/openai/client'
 
+// Helper function to get image size based on social format
+function getImageSizeFromSocialFormat(socialFormat: string): '1024x1024' | '1024x1792' | '1792x1024' {
+  const formatSizes: Record<string, '1024x1024' | '1024x1792' | '1792x1024'> = {
+    'instagram-post': '1024x1024',     // 1:1
+    'instagram-story': '1024x1792',    // 9:16 (closest to)
+    'linkedin': '1792x1024',           // 1.91:1 (closest to landscape)
+    'twitter': '1792x1024',            // 16:9 (closest to landscape)
+    'pinterest': '1024x1792'           // 2:3 (closest to vertical)
+  }
+  
+  return formatSizes[socialFormat] || '1024x1024'
+}
+
 export async function POST(req: Request) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 })
   }
 
   try {
-    const { intent, theme, contextPrompt, brandColors } = await req.json()
+    const { intent, theme, contextPrompt, brandColors, socialFormat } = await req.json()
 
     // Generate narrative structure
     const structure = await generateNarrativeStructure(theme, intent)
     
     // Generate corresponding images and texts
     const [images, slideTexts] = await Promise.all([
-      generateNarrativeImages(structure, brandColors, contextPrompt),
+      generateNarrativeImages(structure, brandColors, contextPrompt, socialFormat),
       generateNarrativeTexts(structure, theme, intent)
     ])
 
@@ -73,12 +86,12 @@ async function generateNarrativeStructure(theme: string, intent: string) {
   }
 }
 
-async function generateNarrativeImages(structure: any[], colors: string[], contextPrompt: string) {
+async function generateNarrativeImages(structure: any[], colors: string[], contextPrompt: string, socialFormat: string) {
   const prompts = structure.map((step, idx) => {
     return `Crea una imagen para la diapositiva ${idx + 1} (${step.type}): ${step.description}. Usa el color palette: verdes, negros y lavanda.`
   })
   
-  return await generateImages(prompts, contextPrompt)
+  return await generateImages(prompts, contextPrompt, socialFormat)
 }
 
 async function generateNarrativeTexts(structure: any[], theme: string, intent: string) {
@@ -89,7 +102,11 @@ async function generateNarrativeTexts(structure: any[], theme: string, intent: s
   return await generateTexts(prompts, intent)
 }
 
-async function generateImages(prompts: string[], contextPrompt: string) {
+async function generateImages(prompts: string[], contextPrompt: string, socialFormat: string) {
+  // Get the appropriate image size based on social format
+  const imageSize = getImageSizeFromSocialFormat(socialFormat)
+  console.log('[Narrative Carousel] Using image size:', imageSize, 'for social format:', socialFormat)
+  
   const imagePromises = prompts.map(async (prompt) => {
     const enhancedPrompt = `${contextPrompt} ${prompt}`
     
@@ -99,7 +116,7 @@ async function generateImages(prompts: string[], contextPrompt: string) {
       model: "dall-e-3",
       prompt: enhancedPrompt,
       n: 1,
-      size: '1024x1024',
+      size: imageSize,
     })
 
     return response.data?.[0]?.url

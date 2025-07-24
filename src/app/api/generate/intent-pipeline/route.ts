@@ -1,15 +1,28 @@
 import { NextResponse } from 'next/server'
 import { openai } from '@/lib/openai/client'
 
+// Helper function to get image size based on social format
+function getImageSizeFromSocialFormat(socialFormat: string): '1024x1024' | '1024x1792' | '1792x1024' {
+  const formatSizes: Record<string, '1024x1024' | '1024x1792' | '1792x1024'> = {
+    'instagram-post': '1024x1024',     // 1:1
+    'instagram-story': '1024x1792',    // 9:16 (closest to)
+    'linkedin': '1792x1024',           // 1.91:1 (closest to landscape)
+    'twitter': '1792x1024',            // 16:9 (closest to landscape)
+    'pinterest': '1024x1792'           // 2:3 (closest to vertical)
+  }
+  
+  return formatSizes[socialFormat] || '1024x1024'
+}
+
 export async function POST(req: Request) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 })
   }
 
   try {
-    const { intent, contextPrompt, brandColors, tone } = await req.json()
+    const { intent, contextPrompt, brandColors, tone, socialFormat } = await req.json()
     
-    console.log('[Intent Pipeline] Received request:', { intent, brandColors, tone })
+    console.log('[Intent Pipeline] Received request:', { intent, brandColors, tone, socialFormat })
 
     // Generate 3-4 images based on intent
     const imagePrompts = generateIntentImagePrompts(intent, tone, brandColors)
@@ -22,7 +35,7 @@ export async function POST(req: Request) {
 
     // Call OpenAI for images and texts
     const [images, texts] = await Promise.all([
-      generateImages(imagePrompts, contextPrompt),
+      generateImages(imagePrompts, contextPrompt, socialFormat),
       generateTexts(textPrompts, intent)
     ])
     
@@ -94,8 +107,12 @@ function generateIntentTextPrompts(intent: string, tone: string) {
   return textPrompts[intent as keyof typeof textPrompts] || textPrompts.sleep
 }
 
-async function generateImages(prompts: string[], contextPrompt: string) {
+async function generateImages(prompts: string[], contextPrompt: string, socialFormat: string) {
   console.log('[Intent Pipeline] Starting image generation for', prompts.length, 'prompts')
+  
+  // Get the appropriate image size based on social format
+  const imageSize = getImageSizeFromSocialFormat(socialFormat)
+  console.log('[Intent Pipeline] Using image size:', imageSize, 'for social format:', socialFormat)
   
   const imagePromises = prompts.map(async (prompt, index) => {
     // Simplify the context prompt to avoid potential issues
@@ -113,7 +130,7 @@ async function generateImages(prompts: string[], contextPrompt: string) {
         model: "dall-e-3",
         prompt: finalPrompt,
         n: 1,
-        size: '1024x1024',
+        size: imageSize,
       })
 
       const imageUrl = response.data?.[0]?.url

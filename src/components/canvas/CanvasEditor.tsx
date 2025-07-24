@@ -44,6 +44,19 @@ const ALIGNMENT_OPTIONS = [
 
 const SNAP_THRESHOLD = 10; // pixels
 
+// Helper function to get canvas dimensions based on social format
+function getCanvasDimensions(socialFormat: string) {
+  const formatDimensions: Record<string, { width: number; height: number }> = {
+    'instagram-post': { width: 1080, height: 1080 },     // 1:1
+    'instagram-story': { width: 1080, height: 1920 },    // 9:16
+    'linkedin': { width: 1200, height: 628 },            // 1.91:1
+    'twitter': { width: 1200, height: 675 },             // 16:9
+    'pinterest': { width: 1000, height: 1500 }           // 2:3
+  }
+  
+  return formatDimensions[socialFormat] || { width: 1080, height: 1080 }
+}
+
 // Social Media Export Presets
 const EXPORT_PRESETS = [
   { name: "Instagram Post", width: 1080, height: 1080, format: "png" as const },
@@ -89,6 +102,7 @@ export interface CanvasEditorProps {
   selectedImage: string | null;
   generatedTexts: string[];
   favoriteTexts: string[];
+  socialFormat?: string;
   onAddTextToCanvas?: (text: string) => void;
 }
 
@@ -98,6 +112,7 @@ export default function CanvasEditor({
   selectedImage,
   generatedTexts,
   favoriteTexts,
+  socialFormat = 'instagram-post',
   onAddTextToCanvas,
 }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -123,10 +138,25 @@ export default function CanvasEditor({
     horizontal: number | null;
   }>({ vertical: null, horizontal: null });
 
-  const CANVAS_WIDTH = 1080;
-  const CANVAS_HEIGHT = 1080;
-  const DISPLAY_WIDTH = 900;
-  const DISPLAY_HEIGHT = 900;
+  // Dynamic canvas dimensions based on social format
+  const canvasDimensions = getCanvasDimensions(socialFormat);
+  const CANVAS_WIDTH = canvasDimensions.width;
+  const CANVAS_HEIGHT = canvasDimensions.height;
+  
+  // Calculate display dimensions maintaining aspect ratio
+  const maxDisplaySize = 900;
+  const canvasAspectRatio = CANVAS_WIDTH / CANVAS_HEIGHT;
+  let DISPLAY_WIDTH, DISPLAY_HEIGHT;
+  
+  if (canvasAspectRatio > 1) {
+    // Landscape
+    DISPLAY_WIDTH = maxDisplaySize;
+    DISPLAY_HEIGHT = maxDisplaySize / canvasAspectRatio;
+  } else {
+    // Portrait or square
+    DISPLAY_HEIGHT = maxDisplaySize;
+    DISPLAY_WIDTH = maxDisplaySize * canvasAspectRatio;
+  }
 
   // Calculate snap positions and show guides
   const calculateSnapPosition = useCallback((element: TextElement, newX: number, newY: number) => {

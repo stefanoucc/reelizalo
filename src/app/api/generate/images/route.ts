@@ -3,6 +3,19 @@ import OpenAI from 'openai'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
+// Helper function to get image size based on social format
+function getImageSizeFromSocialFormat(socialFormat: string): '1024x1024' | '1024x1792' | '1792x1024' {
+  const formatSizes: Record<string, '1024x1024' | '1024x1792' | '1792x1024'> = {
+    'instagram-post': '1024x1024',     // 1:1
+    'instagram-story': '1024x1792',    // 9:16 (closest to)
+    'linkedin': '1792x1024',           // 1.91:1 (closest to landscape)
+    'twitter': '1792x1024',            // 16:9 (closest to landscape)
+    'pinterest': '1024x1792'           // 2:3 (closest to vertical)
+  }
+  
+  return formatSizes[socialFormat] || '1024x1024'
+}
+
 // SOMA Brand Context
 const SOMA_BRAND_CONTEXT = `
 SOMA: High-performance wearable technology brand
@@ -44,13 +57,17 @@ export async function POST(req: Request) {
   console.log('✅ API Key found');
 
   try {
-    const { prompt, count } = await req.json()
-    console.log('📝 Request data:', { prompt: prompt?.substring(0, 100) + '...', count });
+    const { prompt, count, socialFormat } = await req.json()
+    console.log('📝 Request data:', { prompt: prompt?.substring(0, 100) + '...', count, socialFormat });
 
     if (!prompt || !count) {
       console.log('❌ Missing required fields:', { prompt: !!prompt, count: !!count });
       return NextResponse.json({ error: 'Prompt and count are required' }, { status: 400 });
     }
+
+    // Get the appropriate image size based on social format
+    const imageSize = getImageSizeFromSocialFormat(socialFormat)
+    console.log('📐 Using image size:', imageSize, 'for social format:', socialFormat);
 
     if (prompt.length > 1000) {
       console.log('❌ Prompt too long:', prompt.length, 'characters');
@@ -73,7 +90,7 @@ export async function POST(req: Request) {
           model: "dall-e-3",
           prompt: enhancedPrompt,
           n: 1, // Each request can only be for one image
-          size: '1024x1024',
+          size: imageSize,
         }),
         new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Request timeout after 60 seconds')), 60000)
