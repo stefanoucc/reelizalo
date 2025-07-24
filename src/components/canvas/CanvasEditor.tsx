@@ -1527,8 +1527,8 @@ export default function CanvasEditor({
           </div>
 
           {/* Center - Canvas */}
-          <div className="flex-1 flex flex-col items-center">
-            <div className="border rounded-lg p-4 relative" style={{ backgroundColor: "rgba(0, 109, 90, 0.1)", borderColor: "rgba(0, 109, 90, 0.3)" }}>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <div className="w-full max-w-[80vh] aspect-square border rounded-lg p-4 relative" style={{ backgroundColor: "rgba(0, 109, 90, 0.1)", borderColor: "rgba(0, 109, 90, 0.3)" }}>
               {isLoadingImage && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg z-10">
                   <div className="flex flex-col items-center gap-3">
@@ -1547,13 +1547,11 @@ export default function CanvasEditor({
                 onMouseUp={handleMouseUp}
                 width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
-                className="border cursor-crosshair bg-[#051F22]"
+                className="border cursor-crosshair bg-[#051F22] w-full h-full"
                 style={{
                   borderColor: "#015965",
-                  width: DISPLAY_WIDTH,
-                  height: DISPLAY_HEIGHT,
                   maxWidth: "100%",
-                  maxHeight: "80vh"
+                  maxHeight: "100%",
                 }}
               />
             </div>

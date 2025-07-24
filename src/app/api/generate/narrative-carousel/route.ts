@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const { intent, theme, contextPrompt, brandColors } = await req.json()
 
     // Generate narrative structure
-    const structure = generateNarrativeStructure(theme, intent)
+    const structure = await generateNarrativeStructure(theme, intent)
     
     // Generate corresponding images and texts
     const [images, slideTexts] = await Promise.all([
@@ -32,35 +32,50 @@ export async function POST(req: Request) {
   }
 }
 
-function generateNarrativeStructure(theme: string, intent: string) {
-  return [
-    {
-      type: "Hook",
-      description: `Contradiction or attention-grabbing statement about ${theme}`,
-      purpose: "Catch attention with relatable struggle"
-    },
-    {
-      type: "Conflicto",
-      description: `Personal experience or inner struggle related to ${theme}`,
-      purpose: "Build empathy and connection"
-    },
-    {
-      type: "Insight",
-      description: `Reframe belief about ${theme} with deeper truth`,
-      purpose: "Provide new perspective"
-    },
-    {
-      type: "CTA",
-      description: `Soft introduction of SOMA Ring as helpful tool for ${intent}`,
-      purpose: "Present solution without being pushy"
+async function generateNarrativeStructure(theme: string, intent: string) {
+  const systemPrompt = `Eres un estratega creativo para SOMA, una marca de tecnología de bienestar. Tu tarea es generar una estructura narrativa de 4 pasos para un carrusel visual en redes sociales. Recibirás un tema/conflicto central y una intención de usuario. Basado en esto, debes generar una 'descripción' específica y visual para cada una de las cuatro etapas: Hook, Conflicto, Insight y CTA. Estas descripciones guiarán a un generador de imágenes de IA. Responde con un objeto JSON que contenga una clave 'structure', cuyo valor sea un array de objetos. Cada objeto en el array debe tener las claves 'type', 'description' y 'purpose'. Mantén los 'purpose' que se te proporcionan en la estructura base.`
+  const userPrompt = `Conflicto Central: "${theme}"\nIntención: "${intent}"\n\nEstructura base a adaptar:
+[
+    { "type": "Hook", "purpose": "Captar la atención con una lucha relatable" },
+    { "type": "Conflicto", "purpose": "Generar empatía y conexión" },
+    { "type": "Insight", "purpose": "Ofrecer una nueva perspectiva" },
+    { "type": "CTA", "purpose": "Presentar la solución sin ser invasivo" }
+]`
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0.6,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error("No se pudo generar la estructura narrativa.");
+  }
+
+  try {
+    const parsedContent = JSON.parse(content);
+    const structure = parsedContent.structure; 
+
+    if (!structure || !Array.isArray(structure) || structure.length !== 4) {
+        console.error("Invalid structure from LLM:", content);
+        throw new Error("La estructura narrativa generada no es válida.");
     }
-  ]
+    
+    return structure;
+  } catch (error) {
+      console.error("Error parsing narrative structure from LLM:", error, "Content:", content);
+      throw new Error("Error al procesar la estructura narrativa generada.");
+  }
 }
 
 async function generateNarrativeImages(structure: any[], colors: string[], contextPrompt: string) {
   const prompts = structure.map((step, idx) => {
-    const colorPalette = colors.join(', ')
-    return `${contextPrompt} Create an image for slide ${idx + 1} (${step.type}): ${step.description}. Use color palette: ${colorPalette}. Style should be emotional and relatable, not corporate.`
+    return `Crea una imagen para la diapositiva ${idx + 1} (${step.type}): ${step.description}. Usa el color palette: verdes, negros y lavanda.`
   })
   
   return await generateImages(prompts, contextPrompt)
@@ -78,6 +93,8 @@ async function generateImages(prompts: string[], contextPrompt: string) {
   const imagePromises = prompts.map(async (prompt) => {
     const enhancedPrompt = `${contextPrompt} ${prompt}`
     
+    console.log("DALL-E Prompt:", enhancedPrompt);
+
     const response = await openai.images.generate({
       model: "dall-e-3",
       prompt: enhancedPrompt,
@@ -102,7 +119,7 @@ async function generateTexts(prompts: string[], intent: string) {
         { role: "system", content: systemPrompt },
         { role: "user", content: prompt }
       ],
-      temperature: 0.7,
+      temperature: 0.5,
       max_tokens: 100
     })
 
